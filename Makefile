@@ -27,7 +27,7 @@ TGT=fheap
 #Debug Target
 DBGTGT=dfheap
 
-HEADERS = $(INCDIR)/global.h $(INCDIR)/FNode.h $(INCDIR)/FHeap.h
+HEADERS = $(INCDIR)/global.h $(INCDIR)/FNode.h $(INCDIR)/FHeap.h $(INCDIR)/main.h
 
 OBJS = $(OBJDIR)/main.o $(OBJDIR)/FNode.o $(OBJDIR)/FHeap.o
 DBGOBJS = $(OBJDIR)/main.dbg.o

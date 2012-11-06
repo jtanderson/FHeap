@@ -1,3 +1,14 @@
+/**
+ * File: FNode.h
+ *
+ * The header file for the FNode data structure
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ */
+
 #ifndef FNODE_H
 #define FNODE_H
 
@@ -9,13 +20,14 @@ private:
 	int value;
 	bool marked;
 	int degree;
+	void appendSameNode(FNode * f);
 
 public:
 	FNode();
 	FNode(FNode * f);
 	FNode(int v);
 	~FNode();
-	int getValue(){ return value; };
+	int getValue();
 	void setValue( int i ){ value = i; }
 	bool isMarked(){ return marked; }
 	void mark(){ marked = true; }

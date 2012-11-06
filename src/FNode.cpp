@@ -1,11 +1,36 @@
+/**
+ * File: FNode.cpp
+ *
+ * This files contains the implementations of the Nodes
+ * to be used in the Fibonacci-Heap
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ */
+
 #include "FNode.h"
 
-// #define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #include <iostream>
 using namespace std;
 #endif
+
+/**
+ * Function: FNode
+ *
+ * This is the default constructor for the FNode data
+ * structure. It creates a node with no value and no siblings,
+ * parent, or children.
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ */
 
 FNode::FNode(){
 	right = this;
@@ -16,6 +41,18 @@ FNode::FNode(){
 	degree = 0;
 }
 
+/**
+ * Function: FNode
+ *
+ * A constructor that takes an integer and sets the node
+ * value to that parameter.
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ * @param v The value of the node
+ */
 FNode::FNode(int v){
 	value = v;
 	right = this;
@@ -26,10 +63,25 @@ FNode::FNode(int v){
 	degree = 0;
 }
 
+/**
+ * Function: FNode
+ *
+ * A deep-copy constructor
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ * @param f A pointer to an existing FNode
+ */
 FNode::FNode(FNode * f){
 	if ( f == NULL ){
 		throw "ERROR: tried to operate on a NULL node pointer.";
 	}
+
+	#ifdef DEBUG
+	cout << "Making a copy of " << f->getValue() << endl;
+	#endif
 	
 	value = f->getValue();
 	left = this;
@@ -37,10 +89,17 @@ FNode::FNode(FNode * f){
 	marked = f->isMarked();
 	parent = NULL;
 	degree = 0;
+	children = NULL;
 	if ( f->children != NULL ){
 		FNode * current = f->children;
 		do {
-			addChild(current);
+			#ifdef DEBUG
+				cout << "Copying " << current->getValue() << " to " << getValue() << "..." << endl;
+			#endif
+			this->addChild(current);
+			#ifdef DEBUG
+				cout << "Added " << current->getValue() << " to " << getValue() << " successfully!" << endl;
+			#endif
 			current = current->right;
 		} while ( current != f->children );
 	} else {
@@ -48,81 +107,261 @@ FNode::FNode(FNode * f){
 	}
 }
 
+/**
+ * Function: ~FNode
+ *
+ * The default destructor. Also takes care of the parent
+ * and children pointers.
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ */
 FNode::~FNode(){
-	// @TODO: make this better nobody likes a leaky heap
-	FNode * tmp = children;
-	FNode * tmp2;
-	while ( tmp ){
-		tmp2 = tmp->right;
-		delete tmp;
-		tmp = tmp2;
-	}
-	delete tmp;
+	// @TODO: make this better. nobody likes a leaky heap
+	// FNode * tmp = children;
+	// FNode * tmp2;
+	// if ( parent ){
+	// 	if ( parent->children == this ){
+	// 		if ( this->right != this ){
+	// 			parent->children = this->right;
+	// 		} else {
+	// 			parent->children = NULL;
+	// 		}
+	// 	}
+	// }
+	// if ( right ){ right->left = left; }
+	// if ( left ){ left->right = right; }
+	// right = NULL;
+	// left = NULL;
+	// while ( tmp ){
+	// 	tmp2 = tmp->right;
+	// 	delete tmp;
+	// 	tmp = tmp2;
+	// }
+	// delete tmp;
 }
 
+/**
+ * Function: getValue
+ *
+ * Returns the integer value of the function.
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ * @return The value of the node
+ *
+ * @throws Exception if the node has not been properly allocated
+ */
+int FNode::getValue(){
+	if ( this != NULL ){
+		return value;
+	} else {
+		throw "ERROR. Tried to get the value of a null node.";
+	}
+}
+
+/**
+ * Function: unlink
+ *
+ * This severs all connections of the node. All children pointers
+ * are removed as well as the parent pointer and siblings.
+ * Also performs cascading cuts if necessary.
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ * @return A pointer to the unlinked node
+ *
+ */
 FNode * FNode::unlink(){
-	if( right == this ){
-		throw "ERROR: Unlinking singleton node";
+	FNode * tmp, * tmp2;
+	if( this->right == this ){
+		if ( this->parent != NULL ){
+			this->parent->children = NULL;
+			if ( this->parent->isMarked() ){
+				tmp = this->parent;
+				tmp2 = tmp;
+				while ( tmp2->parent != NULL ){
+					tmp2 = tmp2->parent;
+				}
+				if ( tmp != tmp2 ){
+					tmp->unMark();
+					tmp2->appendNode(tmp);
+					tmp->unlink();
+				}
+			} else {
+				this->parent->mark();
+			}
+			this->parent = NULL;
+		}
+		return this;
 	} else {
 		this->right->left = left;
 		this->left->right = right;
-		this->right = this;
-		this->left = this;
 		if ( this->parent && this->parent->children == this ){
 			this->parent->children = this->right;
+		}
+		if ( this->parent && this->parent->isMarked() ){
+			tmp = this->parent;
+			tmp2 = tmp;
+			while ( tmp2->parent ){
+				tmp2 = tmp2->parent;
+			}
+			if ( tmp != tmp2 ){
+				tmp->unMark();
+				tmp2->appendNode(tmp);
+			}
+			tmp->unlink();
+		} else if ( this->parent ) {
 			this->parent->mark();
 		}
+		this->right = this;
+		this->left = this;
 		this->parent = NULL;
 	}
 	return this;
 }
 
+/**
+ * Function: appendNode
+ *
+ * This adds a sibling (A deep copy of the paramter node) 
+ * to the right of the node.
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ * @param f The node to be appended.
+ *
+ * @return A pointer to the node
+ *
+ * @throws Exception if the parameter is NULL
+ */
 FNode * FNode::appendNode(FNode * f){
 	if ( f == NULL ){
 		throw "ERROR: tried to operate on a NULL node pointer.";
 	}
+
+	#ifdef DEBUG
+	cout << "Appending: " << f->getValue() << " to node " << this->value << endl;
+	#endif
 	
 	FNode * n = new FNode (f);
+
 	n->right = right;
 	n->left = this;
-	right->left = n;
-	right = right->left;
+	if ( right != this ){
+		right->left = n;
+	} else {
+		left = n;
+	}
+	right = n;
 	return n;
 }
 
+/**
+ * Function: appendNode
+ *
+ * This adds a sibling (the same node that is passed).
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ * @param f The node to be appended.
+ *
+ * @throws Exception if the parameter is NULL
+ */
+void FNode::appendSameNode(FNode * f){
+	if ( f == NULL ){
+		throw "ERROR: tried to operate on a NULL node pointer.";
+	}
+	
+	f->right = right;
+	f->left = this;
+	if ( right != this ){
+		right->left = f;
+	} else {
+		left = f;
+	}
+	right = f;
+}
+
+/**
+ * Function: prependNode
+ *
+ * This adds a node to the left of the calling node
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ * @param f The node to be copied and prepended
+ *
+ * @return A pointer to the node
+ *
+ * @throws Exception if the parameter node is NULL
+ */
 FNode * FNode::prependNode(FNode * f){
 	if ( f == NULL ){
 		throw "ERROR: tried to operate on a NULL node pointer.";
 	}
 
 	FNode * n = new FNode(f);
-	f->left = left;
-	f->right = this;
-	left->right = n;
-	left = left->right;
+	n->right = right;
+	n->left = this;
+	if ( right != this ){
+		right->left = n;
+	} else {
+		left = n;
+	}
+	right = n;
 	return n;
 }
 
-
+/**
+ * Function: addChild
+ *
+ * This function adds a child as appropriate. It checks to see
+ * if there already children or not then behaves accordingly.
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ * @param f A pointer to the new child
+ *
+ * @return A pointer to the new node
+ *
+ * @throws If the new child is NULL
+ */
 FNode * FNode::addChild(FNode * f){
 	if ( f == NULL ){
 		throw "ERROR: tried to operate on a NULL node pointer.";
 	}
 
 	#ifdef DEBUG
-	cout << "Adding " << f->getValue() << " to node " << value << endl;
+	cout << "Adding child: " << f->getValue() << " to node " << value << endl;
 	#endif
 
 	FNode * n = new FNode(f);
+
 	if ( children == NULL ){
 
 		#ifdef DEBUG
 		cout << "Node " << value << " currently has no children." << endl;
+		cout << "Starting children of " << value << " with " << f->getValue() << endl;
 		#endif
 
-		this->children = n;
-		n->parent = this;
-		n->unMark();
+		this->children = new FNode(f);
+		this->children->parent = this;
+		this->children->unMark();
 	} else {
 		this->children->appendNode(n)->parent = this;
 	}
@@ -131,23 +370,52 @@ FNode * FNode::addChild(FNode * f){
 	return n;
 }
 
+/**
+ * Function: addChild
+ *
+ * This adds a new node with the specified value.
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ * @param i The value of the new node
+ *
+ * @return A pointer to the new node
+ *
+ */
 FNode * FNode::addChild(int i){
 	return addChild(new FNode(i));
 }
 
-
+/**
+ * Function: findInChildren
+ *
+ * This function recursively searches a node and its children
+ * for the node with a particular value.
+ * 
+ * @author Joseph T. Anderson <jtanderson@ratiocaeli.com>
+ * @since 2012-11-04
+ * @version 2012-11-04
+ *
+ * @param target The integer value of the target node
+ *
+ * @return A pointer to the target node if it exists or NULL if not
+ */
 FNode * FNode::findInChildren(int target){
 	if ( target == value ){
 		return this;
-	} else if ( target < value && children ){
+	} else if ( children ){
 		FNode * tmp = children;
+		FNode * test;
 		do {
-			if ( tmp->findInChildren(target) ){
-				return tmp->findInChildren(target);
+			test = tmp->findInChildren(target);
+			if ( test != NULL ){
+				return test;
 			} else {
 				tmp = tmp->right;
 			}
-		} while ( tmp->right != children);
+		} while ( tmp != children);
 	}
 	return NULL;
 }
